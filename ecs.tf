@@ -2,8 +2,8 @@
 # ECS ami
 #
 
-/* 
-data "aws_ami" "ecs" {
+
+/* data "aws_ami" "ecs" {
   most_recent = true
 
   filter {
@@ -17,8 +17,8 @@ data "aws_ami" "ecs" {
   }
 
   owners = ["591542846629"] # AWS
-}
- */
+} */
+ 
 
 
 
@@ -44,33 +44,33 @@ resource "aws_ecs_cluster" "ecs_cluster" {
 resource "aws_security_group" "sg-metabase" {
   name_prefix = "metabase"
   vpc_id      = var.VPC_ID
-  ingress {
+   ingress {
     from_port   = 3000
     to_port     = 3000
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
-  }
-ingress {
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
+      } 
+    ingress {
+        from_port   = 80
+        to_port     = 80
+        protocol    = "tcp"
+        cidr_blocks = ["0.0.0.0/0"]
+      }
 
-  ingress {
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
+      ingress {
+        from_port   = 22
+        to_port     = 22
+        protocol    = "tcp"
+        cidr_blocks = ["0.0.0.0/0"]
+      }
 
 
-   egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
+      egress {
+        from_port   = 0
+        to_port     = 0
+        protocol    = "-1"
+        cidr_blocks = ["0.0.0.0/0"]
+      }
 
 }
 
@@ -79,15 +79,22 @@ ingress {
 
 resource "aws_launch_configuration" "launch_config" {
   name_prefix = "metabase-launch"
-  #image_id    = data.aws_ami.ecs
+  //image_id    = data.aws_ami.ecs.id
   image_id= var.IMAGE_ID
   instance_type = var.INSTANCE_TYPE
   key_name    = var.SSH_KEY_NAME
   iam_instance_profile = aws_iam_instance_profile.cluster-ec2-role.id
   security_groups = [aws_security_group.sg-metabase.id]
   user_data = <<-EOF
+              sudo yum install -y ecs-init
+              sudo service docker start
+              sudo service ecs start
+              sudo newgrp docker
+              sudo usermod -aG docker $USER
+              sudo systemctl restart docker
               #!/bin/bash
               echo ECS_CLUSTER=${aws_ecs_cluster.ecs_cluster.name} >> /etc/ecs/ecs.config
+             
               EOF
 
   lifecycle {
@@ -134,23 +141,49 @@ resource "aws_ecs_task_definition" "metabase-task" {
   family                   = "metabase"
  // task_role_arn      = aws_iam_role.task_role.arn 
   execution_role_arn = aws_iam_role.ecsTaskExecutionRole.arn
-  network_mode             = "bridge"
-  container_definitions    = jsonencode([
+  //network_mode             = "bridge"
+  container_definitions = jsonencode([
     {
-      name            = "nginx-container",
-      image           = "nginx:latest",
-      cpu             = 128,
-      memory          = 128,
-      essential       = true,
-      portMappings    = [
+      "cpu": 512,
+      "memory": 512,
+      "name": "metabase",
+      "image": "metabase/metabase",
+      "portMappings": [
         {
-          containerPort = 80,
-          hostPort      = 0
+          "containerPort": 3000,
+          "protocol": "tcp"
+        }
+      ],
+      "environment": [
+        {
+          "name": "MB_DB_TYPE",
+          "value": "postgres"
+        },
+        {
+          "name": "MB_DB_PORT",
+          "value": "${var.DB_PORT}"
+        },
+        {
+          "name": "MB_DB_DBNAME",
+          "value": "${var.DB_NAME}"
+        },
+        {
+          "name": "MB_DB_USER",
+          "value": "${var.DB_USERNAME}"
+        },
+        {
+          "name": "MB_DB_PASS",
+          "value": "${var.DB_PASSWORD}"
+        },
+        {
+          "name": "MB_DB_HOST",
+          "value": "${replace(aws_db_instance.rds_instance.endpoint,":9856","")}"
         }
       ]
     }
   ])
-}
+
+  }
 
 
 
@@ -162,20 +195,20 @@ resource "aws_ecs_task_definition" "metabase-task" {
 resource "aws_ecs_service" "ecs-service" {
   name    = "nginx-container"
   cluster = aws_ecs_cluster.ecs_cluster.id
-  launch_type     = "EC2"
+ // launch_type     = "EC2"
   task_definition = "${aws_ecs_task_definition.metabase-task.family}:${max(
   aws_ecs_task_definition.metabase-task.revision,
   data.aws_ecs_task_definition.ecs-service-task.revision,
   )}"
   iam_role  = aws_iam_role.cluster-service-role.id
-  /*  deployment_controller {
+ /*   deployment_controller {
     type = "EXTERNAL"
-  }  */
-
+  }  
+ */
    load_balancer {
     target_group_arn = aws_alb_target_group.target-lb-metabase.id
-    container_name   = "nginx-container"
-    container_port   = 80
+    container_name   = "metabase"
+    container_port   = 3000
   }
 
  

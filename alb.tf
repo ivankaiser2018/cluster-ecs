@@ -16,7 +16,7 @@ resource "aws_alb" "alb" {
 # Criar o Target Group do Load Balancer
 resource "aws_alb_target_group" "target-lb-metabase" {
   name        = "target-lb-metabase"
-  port        = 80
+  port        = 3000
   protocol             = "HTTP"
   target_type          = "instance"
   vpc_id      = var.VPC_ID
@@ -36,22 +36,24 @@ resource "aws_alb_listener" "alb-http" {
 }
 
 
-/* 
+
 resource "aws_lb_listener_rule" "alb_rule" {
   listener_arn = aws_alb_listener.alb-http.arn
-  priority     = 2
+  priority     = 20
 
   action {
     type             = "forward"
-    target_group_arn = aws_lb_target_group.target-lb-metabase.arn
+    target_group_arn = aws_alb_target_group.target-lb-metabase.arn
   }
 
   condition {
-    field  = var.CONDITION_FIELD
-    values = var.CONDITION_VALUES
+    path_pattern {
+      values = ["/*"]
+    }
   }
+
 }
- */
+ 
 
 
 
@@ -68,12 +70,12 @@ resource "aws_security_group" "alb-sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-ingress {
-    from_port   = 3000
-    to_port     = 3000
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
+  ingress {
+      from_port   = 3000
+      to_port     = 3000
+      protocol    = "tcp"
+      cidr_blocks = ["0.0.0.0/0"]
+    }
 
   egress {
     from_port   = 0

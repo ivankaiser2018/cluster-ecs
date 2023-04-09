@@ -124,7 +124,10 @@ EOF
 
 
 
-# https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_execution_IAM_role.html
+
+
+#role task definition ecs
+
 resource "aws_iam_role" "ecsTaskExecutionRole" {
   name               = "ecsTaskExecutionRole"
   assume_role_policy = data.aws_iam_policy_document.assume_role_policy.json

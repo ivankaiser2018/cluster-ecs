@@ -72,11 +72,57 @@ variable "INSTANCE_TYPE" {
   default = "t2.micro"
 }
 
+variable "INSTANCE_TYPE_RDS" {
+  type = string
+  default = "db.t2.micro"
+}
+
+variable "DB_NAME" {
+  type = string
+  default = "metabase"
+}
+
+variable "DB_PORT" {
+  type = string
+  default = 9856
+}
+
+variable "ENGINE_DB" {
+  type = string
+  default = "postgres"
+}
+
+variable "ENGINE_VERSION" {
+  type = string
+  default = "12.14"
+}
+
+variable "BD_IDENTIFIER" {
+  type = string
+  default = "ecs-rds"
+}
+
+variable "BD_PARAMETER_GROUP_NAME" {
+  type = string
+  default = "default.postgres12"
+}
 
 
 variable "CLUSTER_NAME" {
   type = string
   default = "metabase-launch"
+}
+
+
+variable "DB_USERNAME" {
+  type = string
+  default = "metabase"
+}
+
+
+variable "DB_PASSWORD" {
+  type = string
+  default = "metabase_hash_2023"
 }
 
 
